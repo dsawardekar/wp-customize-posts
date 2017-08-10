@@ -127,13 +127,11 @@ abstract class WP_Customize_Postmeta_Controller {
 		$count = 0;
 		register_meta( 'post', $this->meta_key, array( $this, 'sanitize_value' ) );
 
-		if ( ! empty( $this->post_types ) && ! empty( $this->post_type_supports ) ) {
-			$post_types = array_intersect( $this->post_types, get_post_types_by_support( $this->post_type_supports ) );
-		} elseif ( ! empty( $this->post_type_supports ) ) {
-			$post_types = get_post_types_by_support( $this->post_type_supports );
-		} else {
-			$post_types = $this->post_types;
-		}
+		/**
+		 * Subclasses can implement get_post_types_for_meta to change/override
+		 * the list of post types to register
+		 */
+		$post_types = $this->get_post_types_for_meta();
 
 		foreach ( $post_types as $post_type ) {
 			$setting_args = array(
@@ -247,4 +245,28 @@ abstract class WP_Customize_Postmeta_Controller {
 		unset( $setting );
 		return $meta_value;
 	}
+
+	/**
+	 * Returns the post types that will be registered with the current
+	 * meta key. Breaking this out allows subclasses to override this.
+	 *
+	 * Eg:- Page Template overrides this to allow template meta key on
+	 * all post types if WP >= 4.7
+	 *
+	 * @return array
+	 */
+	public function get_post_types_for_meta() {
+		if ( ! empty( $this->post_types ) && ! empty( $this->post_type_supports ) ) {
+			$post_types = array_intersect(
+				$this->post_types, get_post_types_by_support( $this->post_type_supports )
+			);
+		} elseif ( ! empty( $this->post_type_supports ) ) {
+			$post_types = get_post_types_by_support( $this->post_type_supports );
+		} else {
+			$post_types = $this->post_types;
+		}
+
+		return $post_types;
+	}
+
 }
