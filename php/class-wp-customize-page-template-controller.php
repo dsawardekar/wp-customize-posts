@@ -72,12 +72,23 @@ class WP_Customize_Page_Template_Controller extends WP_Customize_Postmeta_Contro
 			'value' => 'default',
 			'text' => __( '(Default)', 'customize-posts' ),
 		);
-		foreach ( wp_get_theme()->get_page_templates() as $template_file => $template_name ) {
+
+		$queried_post_type = $this->get_queried_post_type();
+		$current_theme     = wp_get_theme();
+
+		if ( ! is_null( $queried_post_type ) ) {
+			$page_templates = $current_theme->get_page_templates( null, $queried_post_type );
+		} else {
+			$page_templates = $current_theme->get_page_templates();
+		}
+
+		foreach ( $page_templates as $template_file => $template_name ) {
 			$choices[] = array(
 				'text' => $template_name,
 				'value' => $template_file,
 			);
 		}
+
 		return $choices;
 	}
 
@@ -108,7 +119,8 @@ class WP_Customize_Page_Template_Controller extends WP_Customize_Postmeta_Contro
 	 */
 	public function sanitize_setting( $page_template, WP_Customize_Postmeta_Setting $setting ) {
 		$post = get_post( $setting->post_id );
-		$page_templates = wp_get_theme()->get_page_templates( $post );
+		$post_type = $post->post_type;
+		$page_templates = wp_get_theme()->get_page_templates( $post, $post_type );
 		$has_setting_validation = method_exists( 'WP_Customize_Setting', 'validate' );
 
 		if ( 'default' !== $page_template && ! isset( $page_templates[ $page_template ] ) ) {
@@ -116,4 +128,61 @@ class WP_Customize_Page_Template_Controller extends WP_Customize_Postmeta_Contro
 		}
 		return $page_template;
 	}
+
+	/**
+	 * If WordPress 4.7+ all post types can have a page template. So
+	 * we enable template control for all of them.
+	 *
+	 * @return array
+	 */
+	public function get_post_types_for_meta() {
+		$post_types      = parent::get_post_types_for_meta();
+		$current_version = $this->get_current_wp_version();
+
+		if ( version_compare( $current_version, '4.7', '>=' ) ) {
+			$all_post_types = get_post_types();
+			$post_types = array_merge( $post_types, $all_post_types );
+			array_unique( $post_types );
+		}
+
+		return $post_types;
+	}
+
+	/**
+	 * Returns the current wordpress version after minor cleanup for
+	 * version_compare.
+	 *
+	 * @return string
+	 */
+	public function get_current_wp_version() {
+		global $wp_version;
+		$current_version = $wp_version;
+		$current_version = str_replace( '-src', '', $current_version );
+		$current_version = str_replace( '-beta', '', $current_version );
+
+		return $current_version;
+	}
+
+	/**
+	 * Returns the current post type name from the preview url.
+	 *
+	 * @return string|null
+	 */
+	public function get_queried_post_type() {
+		if ( ! empty( $_GET['url'] ) ) {
+			$url        = sanitize_text_field( $_GET['url'] );
+			$url_params = parse_url( $url, PHP_URL_QUERY );
+			$url_params = parse_str( $url_params, $parsed_params );
+			$post_type  = ! empty( $parsed_params['post_type'] ) ? $parsed_params['post_type'] : 'post';
+
+			if ( post_type_exists( $post_type ) ) {
+				return $post_type;
+			} else {
+				return null;
+			}
+		} else {
+			return null;
+		}
+	}
+
 }
