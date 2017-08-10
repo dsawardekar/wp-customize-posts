@@ -149,7 +149,7 @@ class WP_Customize_Page_Template_Controller extends WP_Customize_Postmeta_Contro
 	}
 
 	/**
-	 * Returns the current wordpress version after minor cleanup for
+	 * Returns the current WordPress version after minor cleanup for
 	 * version_compare.
 	 *
 	 * @return string
