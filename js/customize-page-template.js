@@ -53,7 +53,14 @@ var CustomizePageTemplate = (function( api ) {
 		var supports, control, controlId, settingId, isActiveCallback;
 		supports = api.Posts.data.postTypes[ section.params.post_type ].supports;
 
-		if ( ! supports['page-attributes'] || 'page' !== section.params.post_type ) {
+		/*
+		 * If page post_type's page-attributes support was removed exit early.
+		 * For all other post types allow changing page template by default.
+		 *
+		 * The backend still determines whether this control should be
+		 * rendered.
+		 */
+		if ( section.params.post_type === 'page' && ! supports['page-attributes'] ) {
 			return null;
 		}
 
