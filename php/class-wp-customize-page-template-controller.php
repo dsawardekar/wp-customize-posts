@@ -172,11 +172,17 @@ class WP_Customize_Page_Template_Controller extends WP_Customize_Postmeta_Contro
 		if ( ! empty( $_GET['url'] ) ) {
 			$url        = sanitize_text_field( $_GET['url'] );
 			$url_params = parse_url( $url, PHP_URL_QUERY );
-			$url_params = parse_str( $url_params, $parsed_params );
-			$post_type  = ! empty( $parsed_params['post_type'] ) ? $parsed_params['post_type'] : 'post';
 
-			if ( post_type_exists( $post_type ) ) {
-				return $post_type;
+			parse_str( $url_params, $parsed_params );
+
+			if ( ! empty( $parsed_params['post_type'] ) ) {
+				$post_type = $parsed_params['post_type'];
+
+				if ( post_type_exists( $post_type ) ) {
+					return $post_type;
+				} else {
+					return null;
+				}
 			} else {
 				return null;
 			}

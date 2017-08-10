@@ -53,6 +53,9 @@ class Test_WP_Customize_Page_Template_Controller extends WP_UnitTestCase {
 		unset( $GLOBALS['screen'] );
 		unset( $_POST['customized'] );
 		unset( $GLOBALS['wp_customize'] );
+
+		$_GET = array();
+
 		parent::tearDown();
 	}
 
@@ -165,4 +168,94 @@ class Test_WP_Customize_Page_Template_Controller extends WP_UnitTestCase {
 			$this->assertNull( $controller->sanitize_setting( $value, $setting ) );
 		}
 	}
+
+	public function test_it_knows_current_wordpress_version() {
+		$controller = new WP_Customize_Page_Template_Controller();
+
+		global $wp_version;
+
+		$actual = $controller->get_current_wp_version();
+		$this->assertContains( $actual, $wp_version );
+	}
+
+	public function test_it_can_cleanup_src_wordpress_version() {
+		$controller = new WP_Customize_Page_Template_Controller();
+
+		global $wp_version;
+		$wp_version = '4.5.0-src';
+
+		$actual = $controller->get_current_wp_version();
+		$this->assertEquals( '4.5.0', $actual );
+	}
+
+	public function test_it_can_cleanup_beta_wordpress_version() {
+		$controller = new WP_Customize_Page_Template_Controller();
+
+		global $wp_version;
+		$wp_version = '4.5.0-beta';
+
+		$actual = $controller->get_current_wp_version();
+		$this->assertEquals( '4.5.0', $actual );
+	}
+
+	public function test_it_does_not_have_queried_post_type_if_absent_in_url() {
+		$controller = new WP_Customize_Page_Template_Controller();
+
+		$actual = $controller->get_queried_post_type();
+		$this->assertNull( $actual );
+	}
+
+	public function test_it_does_not_have_queried_post_type_if_absent_in_url_params() {
+		$_GET['url'] = home_url( '/wp-admin/customize.php?url=' . urlencode( home_url( '?p=1' ) ) );
+
+		$controller = new WP_Customize_Page_Template_Controller();
+
+		$actual = $controller->get_queried_post_type();
+		$this->assertNull( $actual );
+	}
+
+	public function test_it_does_not_have_queried_post_type_if_not_registered() {
+		$_GET['url'] = home_url( '/wp-admin/customize.php?url=' . urlencode( get_permalink( 1 ) . '?post_type=unknown' ) );
+
+		$controller = new WP_Customize_Page_Template_Controller();
+
+		$actual = $controller->get_queried_post_type();
+		$this->assertNull( $actual );
+	}
+
+	public function test_it_does_have_queried_post_type_if_present_in_url_params() {
+		$_GET['url'] = home_url( '/wp-admin/customize.php?url=' . home_url( '?p=1&post_type=page' ) );
+
+		$controller = new WP_Customize_Page_Template_Controller();
+
+		$actual = $controller->get_queried_post_type();
+		$this->assertEquals( 'page', $actual );
+	}
+
+	public function test_it_does_not_include_cpts_for_meta_if_wp_less_than_4_7() {
+		global $wp_version;
+		$wp_version = '4.6.0';
+		$controller = new WP_Customize_Page_Template_Controller();
+
+		$actual = $controller->get_post_types_for_meta();
+		$this->assertEquals( array( 'page' ), $actual );
+	}
+
+	public function test_it_does_include_cpts_for_meta_if_wp_4_7() {
+		register_post_type( 'lorem', array() );
+		register_post_type( 'ipsum', array() );
+		register_post_type( 'dolor', array() );
+
+		global $wp_version;
+		$wp_version = '4.7';
+		$controller = new WP_Customize_Page_Template_Controller();
+
+		$actual = $controller->get_post_types_for_meta();
+		$this->assertContains( 'lorem', $actual );
+		$this->assertContains( 'ipsum', $actual );
+		$this->assertContains( 'dolor', $actual );
+		$this->assertContains( 'page', $actual );
+		$this->assertContains( 'post', $actual );
+	}
+
 }
